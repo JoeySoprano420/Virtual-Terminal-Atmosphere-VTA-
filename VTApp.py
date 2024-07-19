@@ -27,3 +27,15 @@ class VTApp:
             output = "Invalid command format. Use: <language> <command>"
         
         self.text_area.insert(tk.END, f"> {command}\n{output}\n")
+    def execute_command(self, event):
+        command = self.entry.get()
+        self.entry.delete(0, tk.END)
+        
+        parts = command.split(maxsplit=1)
+        if len(parts) == 2:
+            language, cmd = parts
+            output = self.executor.execute_command(language.lower(), cmd)
+        else:
+            output = "Invalid command format. Use: <language> <command>"
+        
+        self.text_area.insert(tk.END, f"> {command}\n{output}\n")
