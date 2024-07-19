@@ -2,7 +2,87 @@ import tkinter as tk
 from tkinter import scrolledtext, filedialog, messagebox
 import subprocess
 import os
+import re
+import qiskit
+import pygame
+from pydub import AudioSegment
+from midiutil import MIDIFile
+import manim
 
+# Lexer for WCPL
+class Lexer:
+    TOKENS = {
+        'START': r'\bstart\b',
+        'STOP': r'\bstop\b',
+        'OPEN': r'\bopen\b',
+        'CLOSE': r'\bclose\b',
+        'PRINT': r'\bdynamic_print\b',
+        'SCRIPT': r'\bscript\b',
+        'QUANTUM': r'\bquantum\b',
+        'GAME': r'\bgame\b',
+        'MUSIC': r'\bmusic\b',
+        'ANIMATION': r'\banimation\b',
+        'IDENTIFIER': r'[a-zA-Z_][a-zA-Z_0-9]*',
+        'STRING': r'\".*?\"',
+        'NUMBER': r'\b\d+\b',
+        'WHITESPACE': r'\s+',
+        'NEWLINE': r'\n',
+        'COMMENT': r'#.*',
+    }
+
+    def __init__(self, code):
+        self.code = code
+        self.tokens = self.tokenize()
+    
+    def tokenize(self):
+        tokens = []
+        for token_type, pattern in self.TOKENS.items():
+            regex = re.compile(pattern)
+            for match in regex.finditer(self.code):
+                tokens.append((token_type, match.group()))
+        tokens.sort(key=lambda x: x[1])
+        return tokens
+
+# Parser for WCPL
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.pos = 0
+        self.macros = {}
+
+    def parse(self):
+        parsed_code = []
+        while self.pos < len(self.tokens):
+            token_type, value = self.tokens[self.pos]
+            if token_type == 'START':
+                parsed_code.append({'action': 'start'})
+            elif token_type == 'STOP':
+                parsed_code.append({'action': 'stop'})
+            elif token_type == 'PRINT':
+                self.pos += 1
+                value = self.tokens[self.pos][1]
+                parsed_code.append({'action': 'dynamic_print', 'value': value})
+            elif token_type == 'QUANTUM':
+                self.pos += 1
+                q_command = self.tokens[self.pos][1]
+                parsed_code.append({'action': 'quantum', 'command': q_command})
+            elif token_type == 'GAME':
+                self.pos += 1
+                g_command = self.tokens[self.pos][1]
+                parsed_code.append({'action': 'game', 'command': g_command})
+            elif token_type == 'MUSIC':
+                self.pos += 1
+                m_command = self.tokens[self.pos][1]
+                parsed_code.append({'action': 'music', 'command': m_command})
+            elif token_type == 'ANIMATION':
+                self.pos += 1
+                a_command = self.tokens[self.pos][1]
+                parsed_code.append({'action': 'animation', 'command': a_command})
+            # Add more parsing rules here
+            self.pos += 1
+        return parsed_code
+
+# Main VTA Application
 class VTApp:
     def __init__(self, root):
         self.root = root
@@ -114,14 +194,80 @@ class VTApp:
             messagebox.showwarning("Warning", "Save the code before running.")
             return
 
+        with open(self.current_file, "r") as file:
+            code = file.read()
+
+        lexer = Lexer(code)
+        parser = Parser(lexer.tokens)
+        parsed_code = parser.parse()
+
+        for command in parsed_code:
+            if command['action'] == 'start':
+                self.text_area.insert(tk.END, "\n--- WCPL Code Start ---\n")
+            elif command['action'] == 'stop':
+                self.text_area.insert(tk.END, "\n--- WCPL Code Stop ---\n")
+            elif command['action'] == 'dynamic_print':
+                self.text_area.insert(tk.END, f"{command['value']}\n")
+            elif command['action'] == 'quantum':
+                self.run_quantum_command(command['command'])
+            elif command['action'] == 'game':
+                self.run_game_command(command['command'])
+            elif command['action'] == 'music':
+                self.run_music_command(command['command'])
+            elif command['action'] == 'animation':
+                self.run_animation_command(command['command'])
+
+    def run_quantum_command(self, command):
         try:
-            result = subprocess.run(f"wcpl {self.current_file}", shell=True, capture_output=True, text=True)
-            self.text_area.insert(tk.END, "\n--- WCPL Output ---\n")
-            self.text_area.insert(tk.END, result.stdout)
-            if result.stderr:
-                self.text_area.insert(tk.END, result.stderr)
+            if command == "create_circuit":
+                qc = qiskit.QuantumCircuit(2)
+                qc.h(0)
+                qc.cx(0, 1)
+                result = qc.draw()
+                self.text_area.insert(tk
+                self.text_area.insert(tk.END, f"Quantum Circuit:\n{result}\n")
+            # Add more quantum-related commands here
         except Exception as e:
-            self.text_area.insert(tk.END, f"Error running WCPL code: {e}\n")
+            self.text_area.insert(tk.END, f"Error running quantum command: {e}\n")
+
+    def run_game_command(self, command):
+        try:
+            if command == "init_pygame":
+                pygame.init()
+                self.text_area.insert(tk.END, "Pygame initialized.\n")
+            elif command == "create_window":
+                screen = pygame.display.set_mode((800, 600))
+                self.text_area.insert(tk.END, "Pygame window created.\n")
+            elif command == "load_image":
+                image = pygame.image.load('example.png')
+                self.text_area.insert(tk.END, "Image loaded.\n")
+            # Add more pygame-related commands here
+        except Exception as e:
+            self.text_area.insert(tk.END, f"Error running game command: {e}\n")
+
+    def run_music_command(self, command):
+        try:
+            if command.startswith("load_audio"):
+                _, file_path = command.split(' ', 1)
+                audio = AudioSegment.from_file(file_path)
+                self.text_area.insert(tk.END, f"Audio loaded from {file_path}.\n")
+            elif command == "play_audio":
+                # Playing audio functionality would require additional code
+                self.text_area.insert(tk.END, "Audio playing functionality needs implementation.\n")
+            # Add more music-related commands here
+        except Exception as e:
+            self.text_area.insert(tk.END, f"Error running music command: {e}\n")
+
+    def run_animation_command(self, command):
+        try:
+            if command == "render_scene":
+                # Example: Render a simple scene using Manim
+                scene = manim.Scene()
+                scene.play(manim.Write(manim.Text("Hello, Manim!")))
+                self.text_area.insert(tk.END, "Animation rendered.\n")
+            # Add more animation-related commands here
+        except Exception as e:
+            self.text_area.insert(tk.END, f"Error running animation command: {e}\n")
 
 if __name__ == "__main__":
     root = tk.Tk()
