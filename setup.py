@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="VirtualTerminalAtmosphere",
-    version="1.0.0",
+    version="1.0.1",
     author="Joey Soprano 420",
     description="A Virtual Terminal Atmosphere (VTA) for integrating and running various scripts and languages with advanced web crawling and modular plugin architecture.",
     long_description=open('README.md').read(),
