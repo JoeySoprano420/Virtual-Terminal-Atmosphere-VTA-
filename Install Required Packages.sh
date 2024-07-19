@@ -1,1 +1,1 @@
-pip install torch transformers tkinter
+pip install requests beautifulsoup4 scrapy tkinter torch transformers
